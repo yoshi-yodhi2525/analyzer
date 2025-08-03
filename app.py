@@ -83,6 +83,11 @@ except Exception as e:
     # フォント設定に失敗した場合のフォールバック
     plt.rcParams['font.family'] = ['sans-serif']
     plt.rcParams['font.sans-serif'] = ['Liberation Sans', 'DejaVu Sans', 'Arial Unicode MS']
+    # 日本語フォントの設定も試行
+    try:
+        plt.rcParams['font.family'] = ['Liberation Sans', 'DejaVu Sans', 'Arial Unicode MS', 'Hiragino Sans']
+    except:
+        pass
 
 # 追加のフォント設定
 plt.rcParams['font.size'] = 12
@@ -213,6 +218,9 @@ def create_wordcloud(word_freq, title="ワードクラウド"):
         # 追加のLinuxフォント
         '/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf',
         '/usr/share/fonts/truetype/liberation/LiberationSans-BoldItalic.ttf',
+        # 追加のStreamlit Cloud用フォント
+        '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
+        '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
         # Windows用
         'C:/Windows/Fonts/msgothic.ttc',
         'C:/Windows/Fonts/meiryo.ttc',
