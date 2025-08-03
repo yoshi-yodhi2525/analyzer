@@ -45,53 +45,15 @@ except LookupError:
 # 日本語フォントの設定
 def setup_japanese_font():
     """日本語フォントを設定"""
-    font_paths = [
-        # Linux/Streamlit Cloud用のフォント（優先順位順）
-        '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
-        '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
-        '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
-        '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
-        '/usr/share/fonts/opentype/noto/NotoSans-Regular.ttf',
-        '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
-        # Windows用
-        'C:/Windows/Fonts/msgothic.ttc',
-        'C:/Windows/Fonts/meiryo.ttc',
-        'C:/Windows/Fonts/yu gothic.ttc',
-        # Mac用
-        '/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc',
-        '/System/Library/Fonts/ヒラギノ角ゴシック W6.ttc'
-    ]
-    
-    for font_path in font_paths:
-        try:
-            if os.path.exists(font_path):
-                font_prop = fm.FontProperties(fname=font_path)
-                plt.rcParams['font.family'] = font_prop.get_name()
-                break
-        except:
-            continue
-    
-    # フォントが見つからない場合はデフォルト設定
-    if 'font.family' not in plt.rcParams or plt.rcParams['font.family'] == 'DejaVu Sans':
-        plt.rcParams['font.family'] = ['sans-serif']
-        plt.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial Unicode MS', 'Liberation Sans']
+    # Streamlit Cloudでは日本語フォントが利用できないため、
+    # デフォルトの英語フォントのみを使用
+    plt.rcParams['font.family'] = ['sans-serif']
+    plt.rcParams['font.sans-serif'] = ['DejaVu Sans']
+    plt.rcParams['font.size'] = 12
+    plt.rcParams['axes.unicode_minus'] = False
 
 # フォント設定を実行
-try:
-    setup_japanese_font()
-except Exception as e:
-    # フォント設定に失敗した場合のフォールバック
-    plt.rcParams['font.family'] = ['sans-serif']
-    plt.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial Unicode MS']
-    # 日本語フォントの設定も試行
-    try:
-        plt.rcParams['font.family'] = ['DejaVu Sans', 'Arial Unicode MS']
-    except:
-        pass
-
-# 追加のフォント設定
-plt.rcParams['font.size'] = 12
-plt.rcParams['axes.unicode_minus'] = False  # マイナス記号の文字化けを防ぐ
+setup_japanese_font()
 
 # ページ設定
 st.set_page_config(
@@ -206,115 +168,63 @@ def create_wordcloud(word_freq, title="ワードクラウド"):
     if not word_freq:
         return None
     
-    # Streamlit Cloud対応の日本語フォント設定 - より確実な方法
-    font_paths = [
-        # Linux/Streamlit Cloud用のフォント（優先順位順）
-        '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
-        '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
-        '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
-        '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
-        '/usr/share/fonts/opentype/noto/NotoSans-Regular.ttf',
-        '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
-        # 追加のLinuxフォント
-        '/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf',
-        '/usr/share/fonts/truetype/liberation/LiberationSans-BoldItalic.ttf',
-        # Windows用
-        'C:/Windows/Fonts/msgothic.ttc',
-        'C:/Windows/Fonts/meiryo.ttc',
-        'C:/Windows/Fonts/yu gothic.ttc',
-        # Mac用
-        '/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc',
-        '/System/Library/Fonts/ヒラギノ角ゴシック W6.ttc'
-    ]
+    # 日本語フォントをダウンロードして使用
+    import urllib.request
+    import tempfile
     
-    wordcloud = None
-    for font_path in font_paths:
-        try:
-            if os.path.exists(font_path):
-                wordcloud = WordCloud(
-                    width=800, 
-                    height=400, 
-                    background_color='white',
-                    colormap='viridis',
-                    font_path=font_path,
-                    max_words=100,
-                    max_font_size=100,
-                    min_font_size=10,
-                    prefer_horizontal=0.7,
-                    relative_scaling=0.5,
-                    collocations=False  # 重複を避ける
-                ).generate_from_frequencies(word_freq)
-                break
-        except Exception as e:
-            continue
+    # 日本語フォントのURL（Google FontsのNoto Sans Japanese）
+    font_url = "https://github.com/googlefonts/noto-cjk/raw/main/Sans/OTF/Japanese/NotoSansCJKjp-Regular.otf"
     
-    # フォントが見つからない場合のフォールバック - より確実な方法
-    if wordcloud is None:
+    try:
+        # フォントファイルをダウンロード
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.otf') as tmp_file:
+            urllib.request.urlretrieve(font_url, tmp_file.name)
+            font_path = tmp_file.name
+        
+        # ワードクラウドを生成
+        wordcloud = WordCloud(
+            width=800, 
+            height=400, 
+            background_color='white',
+            colormap='viridis',
+            font_path=font_path,
+            max_words=100,
+            max_font_size=100,
+            min_font_size=10,
+            prefer_horizontal=0.7,
+            relative_scaling=0.5,
+            collocations=False
+        ).generate_from_frequencies(word_freq)
+        
+        # 一時ファイルを削除
+        os.unlink(font_path)
+        
+    except Exception as e:
+        # フォントダウンロードに失敗した場合のフォールバック
         try:
-            # システムフォントを使用（font_path=None）
+            # システムフォントを使用
             wordcloud = WordCloud(
                 width=800, 
                 height=400, 
                 background_color='white',
                 colormap='viridis',
-                max_words=100,
-                max_font_size=100,
-                min_font_size=10,
-                prefer_horizontal=0.7,
-                relative_scaling=0.5,
+                max_words=50,
+                max_font_size=80,
+                min_font_size=8,
+                prefer_horizontal=0.8,
+                relative_scaling=0.3,
                 collocations=False,
-                font_path=None  # システムデフォルトフォントを使用
+                font_path=None
             ).generate_from_frequencies(word_freq)
-        except Exception as e:
-            # 最後の手段：デフォルト設定で再試行
-            try:
-                wordcloud = WordCloud(
-                    width=800, 
-                    height=400, 
-                    background_color='white',
-                    colormap='viridis',
-                    max_words=30,  # 単語数をさらに減らす
-                    max_font_size=60,
-                    min_font_size=6,
-                    prefer_horizontal=0.9,
-                    relative_scaling=0.2,
-                    collocations=False,
-                    font_path=None
-                ).generate_from_frequencies(word_freq)
-            except Exception as e2:
-                # 最終手段：英語のみのワードクラウド
-                try:
-                    # 日本語文字を除外して英語のみでワードクラウドを生成
-                    english_word_freq = {word: freq for word, freq in word_freq.items() 
-                                       if not any(ord(char) > 127 for char in word)}
-                    if english_word_freq:
-                        wordcloud = WordCloud(
-                            width=800, 
-                            height=400, 
-                            background_color='white',
-                            colormap='viridis',
-                            max_words=20,
-                            max_font_size=50,
-                            min_font_size=5,
-                            prefer_horizontal=0.9,
-                            relative_scaling=0.1,
-                            collocations=False
-                        ).generate_from_frequencies(english_word_freq)
-                    else:
-                        st.error("日本語フォントが見つからないため、ワードクラウドを生成できませんでした。")
-                        return None
-                except Exception as e3:
-                    st.error(f"ワードクラウドの生成中にエラーが発生しました: {str(e3)}")
-                    return None
+        except Exception as e2:
+            st.error(f"ワードクラウドの生成中にエラーが発生しました: {str(e2)}")
+            return None
     
     try:
         fig, ax = plt.subplots(figsize=(10, 6))
         ax.imshow(wordcloud, interpolation='bilinear')
         ax.axis('off')
-        ax.set_title(title, fontsize=16, fontweight='bold', fontfamily='Liberation Sans')
-        
-        # フォント設定を確実にする
-        plt.rcParams['font.family'] = ['Liberation Sans', 'DejaVu Sans', 'Arial Unicode MS']
+        ax.set_title(title, fontsize=16, fontweight='bold')
         
         return fig
     except Exception as e:
