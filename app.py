@@ -74,7 +74,7 @@ def setup_japanese_font():
     # フォントが見つからない場合はデフォルト設定
     if 'font.family' not in plt.rcParams or plt.rcParams['font.family'] == 'DejaVu Sans':
         plt.rcParams['font.family'] = ['sans-serif']
-        plt.rcParams['font.sans-serif'] = ['Liberation Sans', 'DejaVu Sans', 'Arial Unicode MS', 'Hiragino Sans']
+        plt.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial Unicode MS', 'Liberation Sans']
 
 # フォント設定を実行
 try:
@@ -82,10 +82,10 @@ try:
 except Exception as e:
     # フォント設定に失敗した場合のフォールバック
     plt.rcParams['font.family'] = ['sans-serif']
-    plt.rcParams['font.sans-serif'] = ['Liberation Sans', 'DejaVu Sans', 'Arial Unicode MS']
+    plt.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial Unicode MS']
     # 日本語フォントの設定も試行
     try:
-        plt.rcParams['font.family'] = ['Liberation Sans', 'DejaVu Sans', 'Arial Unicode MS', 'Hiragino Sans']
+        plt.rcParams['font.family'] = ['DejaVu Sans', 'Arial Unicode MS']
     except:
         pass
 
@@ -209,18 +209,15 @@ def create_wordcloud(word_freq, title="ワードクラウド"):
     # Streamlit Cloud対応の日本語フォント設定 - より確実な方法
     font_paths = [
         # Linux/Streamlit Cloud用のフォント（優先順位順）
-        '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
-        '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
         '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
         '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+        '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
+        '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
         '/usr/share/fonts/opentype/noto/NotoSans-Regular.ttf',
         '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
         # 追加のLinuxフォント
         '/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf',
         '/usr/share/fonts/truetype/liberation/LiberationSans-BoldItalic.ttf',
-        # 追加のStreamlit Cloud用フォント
-        '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
-        '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
         # Windows用
         'C:/Windows/Fonts/msgothic.ttc',
         'C:/Windows/Fonts/meiryo.ttc',
@@ -276,16 +273,39 @@ def create_wordcloud(word_freq, title="ワードクラウド"):
                     height=400, 
                     background_color='white',
                     colormap='viridis',
-                    max_words=50,  # 単語数を減らす
-                    max_font_size=80,
-                    min_font_size=8,
-                    prefer_horizontal=0.8,
-                    relative_scaling=0.3,
-                    collocations=False
+                    max_words=30,  # 単語数をさらに減らす
+                    max_font_size=60,
+                    min_font_size=6,
+                    prefer_horizontal=0.9,
+                    relative_scaling=0.2,
+                    collocations=False,
+                    font_path=None
                 ).generate_from_frequencies(word_freq)
             except Exception as e2:
-                st.error(f"ワードクラウドの生成中にエラーが発生しました: {str(e2)}")
-                return None
+                # 最終手段：英語のみのワードクラウド
+                try:
+                    # 日本語文字を除外して英語のみでワードクラウドを生成
+                    english_word_freq = {word: freq for word, freq in word_freq.items() 
+                                       if not any(ord(char) > 127 for char in word)}
+                    if english_word_freq:
+                        wordcloud = WordCloud(
+                            width=800, 
+                            height=400, 
+                            background_color='white',
+                            colormap='viridis',
+                            max_words=20,
+                            max_font_size=50,
+                            min_font_size=5,
+                            prefer_horizontal=0.9,
+                            relative_scaling=0.1,
+                            collocations=False
+                        ).generate_from_frequencies(english_word_freq)
+                    else:
+                        st.error("日本語フォントが見つからないため、ワードクラウドを生成できませんでした。")
+                        return None
+                except Exception as e3:
+                    st.error(f"ワードクラウドの生成中にエラーが発生しました: {str(e3)}")
+                    return None
     
     try:
         fig, ax = plt.subplots(figsize=(10, 6))
