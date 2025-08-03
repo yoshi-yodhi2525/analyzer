@@ -22,14 +22,25 @@ from io import BytesIO
 import base64
 
 # NLTKデータのダウンロード
+import os
+import ssl
+
+try:
+    _create_unverified_https_context = ssl._create_unverified_context
+except AttributeError:
+    pass
+else:
+    ssl._create_default_https_context = _create_unverified_https_context
+
+# NLTKデータを確実にダウンロード
 try:
     nltk.data.find('tokenizers/punkt')
 except LookupError:
-    nltk.download('punkt')
+    nltk.download('punkt', quiet=True)
 try:
     nltk.data.find('corpora/stopwords')
 except LookupError:
-    nltk.download('stopwords')
+    nltk.download('stopwords', quiet=True)
 
 # 日本語フォントの設定
 def setup_japanese_font():
@@ -41,24 +52,33 @@ def setup_japanese_font():
         '/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc',
         '/System/Library/Fonts/ヒラギノ角ゴシック W6.ttc',
         '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
-        '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc'
+        '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+        # Streamlit Cloud用の追加フォントパス
+        '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
+        '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf'
     ]
     
     for font_path in font_paths:
         try:
-            font_prop = fm.FontProperties(fname=font_path)
-            plt.rcParams['font.family'] = font_prop.get_name()
-            break
+            if os.path.exists(font_path):
+                font_prop = fm.FontProperties(fname=font_path)
+                plt.rcParams['font.family'] = font_prop.get_name()
+                break
         except:
             continue
     
     # フォントが見つからない場合はデフォルト設定
     if 'font.family' not in plt.rcParams or plt.rcParams['font.family'] == 'DejaVu Sans':
         plt.rcParams['font.family'] = ['sans-serif']
-        plt.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial Unicode MS', 'Hiragino Sans']
+        plt.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial Unicode MS', 'Hiragino Sans', 'Liberation Sans']
 
 # フォント設定を実行
-setup_japanese_font()
+try:
+    setup_japanese_font()
+except Exception as e:
+    # フォント設定に失敗した場合のフォールバック
+    plt.rcParams['font.family'] = ['sans-serif']
+    plt.rcParams['font.sans-serif'] = ['DejaVu Sans']
 
 # ページ設定
 st.set_page_config(
@@ -179,23 +199,27 @@ def create_wordcloud(word_freq, title="ワードクラウド"):
         '/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc',  # Mac用
         '/System/Library/Fonts/ヒラギノ角ゴシック W6.ttc',  # Mac用
         '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',  # Linux用
-        '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc'  # Linux用
+        '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',  # Linux用
+        # Streamlit Cloud用の追加フォントパス
+        '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
+        '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf'
     ]
     
     wordcloud = None
     for font_path in font_paths:
         try:
-            wordcloud = WordCloud(
-                width=800, 
-                height=400, 
-                background_color='white',
-                colormap='viridis',
-                font_path=font_path,
-                max_words=100,
-                max_font_size=100,
-                min_font_size=10
-            ).generate_from_frequencies(word_freq)
-            break
+            if os.path.exists(font_path):
+                wordcloud = WordCloud(
+                    width=800, 
+                    height=400, 
+                    background_color='white',
+                    colormap='viridis',
+                    font_path=font_path,
+                    max_words=100,
+                    max_font_size=100,
+                    min_font_size=10
+                ).generate_from_frequencies(word_freq)
+                break
         except:
             continue
     
