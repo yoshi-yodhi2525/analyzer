@@ -46,16 +46,20 @@ except LookupError:
 def setup_japanese_font():
     """日本語フォントを設定"""
     font_paths = [
+        # Linux/Streamlit Cloud用のフォント（優先順位順）
+        '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
+        '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
+        '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+        '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+        '/usr/share/fonts/opentype/noto/NotoSans-Regular.ttf',
+        '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+        # Windows用
         'C:/Windows/Fonts/msgothic.ttc',
         'C:/Windows/Fonts/meiryo.ttc',
         'C:/Windows/Fonts/yu gothic.ttc',
+        # Mac用
         '/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc',
-        '/System/Library/Fonts/ヒラギノ角ゴシック W6.ttc',
-        '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
-        '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
-        # Streamlit Cloud用の追加フォントパス
-        '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
-        '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf'
+        '/System/Library/Fonts/ヒラギノ角ゴシック W6.ttc'
     ]
     
     for font_path in font_paths:
@@ -70,7 +74,7 @@ def setup_japanese_font():
     # フォントが見つからない場合はデフォルト設定
     if 'font.family' not in plt.rcParams or plt.rcParams['font.family'] == 'DejaVu Sans':
         plt.rcParams['font.family'] = ['sans-serif']
-        plt.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial Unicode MS', 'Hiragino Sans', 'Liberation Sans']
+        plt.rcParams['font.sans-serif'] = ['Liberation Sans', 'DejaVu Sans', 'Arial Unicode MS', 'Hiragino Sans']
 
 # フォント設定を実行
 try:
@@ -146,15 +150,17 @@ class TextAnalyzer:
         if language == 'auto':
             language = self.detect_language(text)
         
-        # 特殊文字と数字を除去
-        text = re.sub(r'[^\w\s]', '', text)
-        text = re.sub(r'\d+', '', text)
-        
         if language == 'japanese':
+            # 日本語の場合は数字と記号のみ除去（日本語文字は保持）
+            text = re.sub(r'[0-9０-９]', '', text)
+            text = re.sub(r'[^\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\s]', '', text)
             # 日本語の場合はjiebaを使用
             tokens = jieba.cut(text)
             tokens = [token for token in tokens if len(token) > 1 and token not in self.stop_words]
         else:
+            # 英語の場合は従来通り
+            text = re.sub(r'[^\w\s]', '', text)
+            text = re.sub(r'\d+', '', text)
             # 英語の場合はNLTKを使用
             tokens = word_tokenize(text.lower())
             tokens = [token for token in tokens if token.isalpha() and token not in self.stop_words]
@@ -191,18 +197,22 @@ def create_wordcloud(word_freq, title="ワードクラウド"):
     if not word_freq:
         return None
     
-    # 日本語フォントの設定
+    # Streamlit Cloud対応の日本語フォント設定
     font_paths = [
-        'C:/Windows/Fonts/msgothic.ttc',  # Windows用
-        'C:/Windows/Fonts/meiryo.ttc',    # Windows用
-        'C:/Windows/Fonts/yu gothic.ttc', # Windows用
-        '/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc',  # Mac用
-        '/System/Library/Fonts/ヒラギノ角ゴシック W6.ttc',  # Mac用
-        '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',  # Linux用
-        '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',  # Linux用
-        # Streamlit Cloud用の追加フォントパス
+        # Linux/Streamlit Cloud用のフォント（優先順位順）
         '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
-        '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf'
+        '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
+        '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+        '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+        '/usr/share/fonts/opentype/noto/NotoSans-Regular.ttf',
+        '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+        # Windows用
+        'C:/Windows/Fonts/msgothic.ttc',
+        'C:/Windows/Fonts/meiryo.ttc',
+        'C:/Windows/Fonts/yu gothic.ttc',
+        # Mac用
+        '/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc',
+        '/System/Library/Fonts/ヒラギノ角ゴシック W6.ttc'
     ]
     
     wordcloud = None
@@ -217,15 +227,18 @@ def create_wordcloud(word_freq, title="ワードクラウド"):
                     font_path=font_path,
                     max_words=100,
                     max_font_size=100,
-                    min_font_size=10
+                    min_font_size=10,
+                    prefer_horizontal=0.7,
+                    relative_scaling=0.5
                 ).generate_from_frequencies(word_freq)
                 break
-        except:
+        except Exception as e:
             continue
     
-    # フォントが見つからない場合はデフォルトフォントを使用
+    # フォントが見つからない場合のフォールバック - システムデフォルトフォントを使用
     if wordcloud is None:
         try:
+            # システムフォントを使用（font_path=None）
             wordcloud = WordCloud(
                 width=800, 
                 height=400, 
@@ -233,7 +246,10 @@ def create_wordcloud(word_freq, title="ワードクラウド"):
                 colormap='viridis',
                 max_words=100,
                 max_font_size=100,
-                min_font_size=10
+                min_font_size=10,
+                prefer_horizontal=0.7,
+                relative_scaling=0.5,
+                font_path=None  # システムデフォルトフォントを使用
             ).generate_from_frequencies(word_freq)
         except Exception as e:
             st.error(f"ワードクラウドの生成中にエラーが発生しました: {str(e)}")
