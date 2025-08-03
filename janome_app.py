@@ -25,12 +25,13 @@ import base64
 import os
 import ssl
 
+# SSL証明書の検証を無効化（Streamlit Cloudでの問題を回避）
 try:
     _create_unverified_https_context = ssl._create_unverified_context
 except AttributeError:
     pass
 else:
-    ssl._create_default_https_context = _create_unverified_context
+    ssl._create_default_https_context = _create_unverified_https_context
 
 # NLTKデータを確実にダウンロード
 try:
