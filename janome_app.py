@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 from wordcloud import WordCloud
 import networkx as nx
-import jieba
+from janome.tokenizer import Tokenizer
 import re
 from collections import Counter, defaultdict
 import nltk
@@ -30,7 +30,7 @@ try:
 except AttributeError:
     pass
 else:
-    ssl._create_default_https_context = _create_unverified_https_context
+    ssl._create_default_https_context = _create_unverified_context
 
 # NLTKデータを確実にダウンロード
 try:
@@ -57,7 +57,7 @@ setup_japanese_font()
 
 # ページ設定
 st.set_page_config(
-    page_title="テキスト分析アプリ",
+    page_title="テキスト分析アプリ (Janome版)",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -102,9 +102,11 @@ class TextAnalyzer:
         self.stop_words = set(stopwords.words('english'))
         # 日本語のストップワードを追加
         japanese_stop_words = {
-            'の', 'に', 'は', 'を', 'た', 'が', 'で', 'て', 'と', 'し', 'れ', 'さ', 'ある', 'いる', 'も', 'する', 'から', 'な', 'こと', 'として', 'い', 'や', 'れる', 'など', 'なっ', 'ない', 'この', 'ため', 'その', 'あっ', 'よう', 'また', 'それ', 'という', 'あり', 'まで', 'られ', 'なる', 'へ', 'か', 'だ', 'これ', 'で', 'あ', 'や', 'られ', 'なる', 'の', 'に', 'は', 'を', 'た', 'が', 'で', 'て', 'と', 'し', 'れ', 'さ', 'ある', 'いる', 'も', 'する', 'から', 'な', 'こと', 'として', 'い', 'や', 'れる', 'など', 'なっ', 'ない', 'この', 'ため', 'その', 'あっ', 'よう', 'また', 'それ', 'という', 'あり', 'まで', 'られ', 'なる', 'へ', 'か', 'だ', 'これ', 'で', 'あ', 'や', 'られ', 'なる'
+            'の', 'に', 'は', 'を', 'た', 'が', 'で', 'て', 'と', 'し', 'れ', 'さ', 'ある', 'いる', 'も', 'する', 'から', 'な', 'こと', 'として', 'い', 'や', 'れる', 'など', 'なっ', 'ない', 'この', 'ため', 'その', 'あっ', 'よう', 'また', 'それ', 'という', 'あり', 'まで', 'られ', 'なる', 'へ', 'か', 'だ', 'これ', 'で', 'あ', 'や', 'られ', 'なる'
         }
         self.stop_words.update(japanese_stop_words)
+        # Janomeトークナイザーを初期化
+        self.tokenizer = Tokenizer()
     
     def detect_language(self, text):
         """テキストの言語を検出"""
@@ -117,22 +119,29 @@ class TextAnalyzer:
             return 'english'
     
     def tokenize_text(self, text, language='auto'):
-        """テキストをトークン化"""
+        """テキストをトークン化（Janome使用）"""
         if language == 'auto':
             language = self.detect_language(text)
         
         if language == 'japanese':
-            # 日本語の場合は数字と記号のみ除去（日本語文字は保持）
-            text = re.sub(r'[0-9０-９]', '', text)
-            text = re.sub(r'[^\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\s]', '', text)
-            # 日本語の場合はjiebaを使用
-            tokens = jieba.cut(text)
-            tokens = [token for token in tokens if len(token) > 1 and token not in self.stop_words and token.strip()]
+            # 日本語の場合はJanomeを使用
+            tokens = []
+            for token in self.tokenizer.tokenize(text):
+                # 品詞フィルタリング（名詞、動詞、形容詞のみ）
+                if token.part_of_speech.split(',')[0] in ['名詞', '動詞', '形容詞']:
+                    # 読み方を取得（ひらがな）
+                    reading = token.reading
+                    if reading and reading != '*':
+                        tokens.append(reading)
+                    else:
+                        # 読み方がない場合は表層形を使用
+                        surface = token.surface
+                        if len(surface) > 1 and surface not in self.stop_words:
+                            tokens.append(surface)
         else:
             # 英語の場合は従来通り
             text = re.sub(r'[^\w\s]', '', text)
             text = re.sub(r'\d+', '', text)
-            # 英語の場合はNLTKを使用
             tokens = word_tokenize(text.lower())
             tokens = [token for token in tokens if token.isalpha() and token not in self.stop_words]
         
@@ -393,10 +402,8 @@ def create_cooccurrence_network(cooccurrence, min_weight=2, max_nodes=30):
         st.error(f"共起ネットワークの作成中にエラーが発生しました: {str(e)}")
         return None
 
-
-
 def main():
-    st.markdown('<h1 class="main-header">📊 テキスト分析アプリ</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header">📊 テキスト分析アプリ (Janome版)</h1>', unsafe_allow_html=True)
     
     # サイドバー
     st.sidebar.markdown("## 📁 データアップロード")
@@ -502,9 +509,9 @@ def main():
                     with st.expander("検索結果を表示"):
                         for i, text in enumerate(matching_texts[:10]):  # 最初の10件のみ表示
                             st.write(f"{i+1}. {text[:200]}{'...' if len(text) > 200 else ''}")
-                        
-                        if len(matching_texts) > 10:
-                            st.info(f"他に{len(matching_texts) - 10}件の結果があります。")
+                            
+                            if len(matching_texts) > 10:
+                                st.info(f"他に{len(matching_texts) - 10}件の結果があります。")
                 else:
                     st.warning(f"'{search_term}'を含むテキストが見つかりませんでした。")
             
@@ -629,9 +636,8 @@ def main():
         
         <h3>🎯 機能</h3>
         <ul>
-            <li>📊 ワードクラウド生成</li>
+            <li>📊 ワードクラウド生成（Janome形態素解析）</li>
             <li>🕸️ 共起ネットワーク可視化</li>
-            <li>🎬 アニメーション機能</li>
             <li>🔍 キーワード検索</li>
             <li>📈 頻出単語ランキング</li>
         </ul>
@@ -641,6 +647,7 @@ def main():
             <li>CSVファイル（UTF-8エンコーディング推奨）</li>
             <li>日本語・英語テキスト対応</li>
             <li>複数カラム選択可能</li>
+            <li>Janomeによる高精度な日本語形態素解析</li>
         </ul>
         </div>
         """, unsafe_allow_html=True)
