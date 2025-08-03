@@ -130,15 +130,15 @@ class TextAnalyzer:
             for token in self.tokenizer.tokenize(text):
                 # 品詞フィルタリング（名詞、動詞、形容詞のみ）
                 if token.part_of_speech.split(',')[0] in ['名詞', '動詞', '形容詞']:
-                    # 読み方を取得（ひらがな）
-                    reading = token.reading
-                    if reading and reading != '*':
-                        tokens.append(reading)
+                    # 表層形を優先的に使用（カタカナ・漢字を保持）
+                    surface = token.surface
+                    if len(surface) > 1 and surface not in self.stop_words:
+                        tokens.append(surface)
                     else:
-                        # 読み方がない場合は表層形を使用
-                        surface = token.surface
-                        if len(surface) > 1 and surface not in self.stop_words:
-                            tokens.append(surface)
+                        # 表層形が不適切な場合は読み方を使用
+                        reading = token.reading
+                        if reading and reading != '*' and len(reading) > 1:
+                            tokens.append(reading)
         else:
             # 英語の場合は従来通り
             text = re.sub(r'[^\w\s]', '', text)
