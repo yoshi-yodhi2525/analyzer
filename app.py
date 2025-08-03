@@ -82,7 +82,11 @@ try:
 except Exception as e:
     # フォント設定に失敗した場合のフォールバック
     plt.rcParams['font.family'] = ['sans-serif']
-    plt.rcParams['font.sans-serif'] = ['DejaVu Sans']
+    plt.rcParams['font.sans-serif'] = ['Liberation Sans', 'DejaVu Sans', 'Arial Unicode MS']
+
+# 追加のフォント設定
+plt.rcParams['font.size'] = 12
+plt.rcParams['axes.unicode_minus'] = False  # マイナス記号の文字化けを防ぐ
 
 # ページ設定
 st.set_page_config(
@@ -156,7 +160,7 @@ class TextAnalyzer:
             text = re.sub(r'[^\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF\s]', '', text)
             # 日本語の場合はjiebaを使用
             tokens = jieba.cut(text)
-            tokens = [token for token in tokens if len(token) > 1 and token not in self.stop_words]
+            tokens = [token for token in tokens if len(token) > 1 and token not in self.stop_words and token.strip()]
         else:
             # 英語の場合は従来通り
             text = re.sub(r'[^\w\s]', '', text)
@@ -197,7 +201,7 @@ def create_wordcloud(word_freq, title="ワードクラウド"):
     if not word_freq:
         return None
     
-    # Streamlit Cloud対応の日本語フォント設定
+    # Streamlit Cloud対応の日本語フォント設定 - より確実な方法
     font_paths = [
         # Linux/Streamlit Cloud用のフォント（優先順位順）
         '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
@@ -206,6 +210,9 @@ def create_wordcloud(word_freq, title="ワードクラウド"):
         '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
         '/usr/share/fonts/opentype/noto/NotoSans-Regular.ttf',
         '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+        # 追加のLinuxフォント
+        '/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf',
+        '/usr/share/fonts/truetype/liberation/LiberationSans-BoldItalic.ttf',
         # Windows用
         'C:/Windows/Fonts/msgothic.ttc',
         'C:/Windows/Fonts/meiryo.ttc',
@@ -229,13 +236,14 @@ def create_wordcloud(word_freq, title="ワードクラウド"):
                     max_font_size=100,
                     min_font_size=10,
                     prefer_horizontal=0.7,
-                    relative_scaling=0.5
+                    relative_scaling=0.5,
+                    collocations=False  # 重複を避ける
                 ).generate_from_frequencies(word_freq)
                 break
         except Exception as e:
             continue
     
-    # フォントが見つからない場合のフォールバック - システムデフォルトフォントを使用
+    # フォントが見つからない場合のフォールバック - より確実な方法
     if wordcloud is None:
         try:
             # システムフォントを使用（font_path=None）
@@ -249,17 +257,36 @@ def create_wordcloud(word_freq, title="ワードクラウド"):
                 min_font_size=10,
                 prefer_horizontal=0.7,
                 relative_scaling=0.5,
+                collocations=False,
                 font_path=None  # システムデフォルトフォントを使用
             ).generate_from_frequencies(word_freq)
         except Exception as e:
-            st.error(f"ワードクラウドの生成中にエラーが発生しました: {str(e)}")
-            return None
+            # 最後の手段：デフォルト設定で再試行
+            try:
+                wordcloud = WordCloud(
+                    width=800, 
+                    height=400, 
+                    background_color='white',
+                    colormap='viridis',
+                    max_words=50,  # 単語数を減らす
+                    max_font_size=80,
+                    min_font_size=8,
+                    prefer_horizontal=0.8,
+                    relative_scaling=0.3,
+                    collocations=False
+                ).generate_from_frequencies(word_freq)
+            except Exception as e2:
+                st.error(f"ワードクラウドの生成中にエラーが発生しました: {str(e2)}")
+                return None
     
     try:
         fig, ax = plt.subplots(figsize=(10, 6))
         ax.imshow(wordcloud, interpolation='bilinear')
         ax.axis('off')
-        ax.set_title(title, fontsize=16, fontweight='bold')
+        ax.set_title(title, fontsize=16, fontweight='bold', fontfamily='Liberation Sans')
+        
+        # フォント設定を確実にする
+        plt.rcParams['font.family'] = ['Liberation Sans', 'DejaVu Sans', 'Arial Unicode MS']
         
         return fig
     except Exception as e:
