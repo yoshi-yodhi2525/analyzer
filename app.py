@@ -168,80 +168,36 @@ def create_wordcloud(word_freq, title="ワードクラウド"):
     if not word_freq:
         return None
     
-    # 日本語文字を英語に変換してワードクラウドを生成
-    def convert_japanese_to_english(word):
-        """日本語文字を英語に変換"""
-        # 日本語文字の変換マッピング
-        japanese_to_english = {
-            'あ': 'a', 'い': 'i', 'う': 'u', 'え': 'e', 'お': 'o',
-            'か': 'ka', 'き': 'ki', 'く': 'ku', 'け': 'ke', 'こ': 'ko',
-            'さ': 'sa', 'し': 'shi', 'す': 'su', 'せ': 'se', 'そ': 'so',
-            'た': 'ta', 'ち': 'chi', 'つ': 'tsu', 'て': 'te', 'と': 'to',
-            'な': 'na', 'に': 'ni', 'ぬ': 'nu', 'ね': 'ne', 'の': 'no',
-            'は': 'ha', 'ひ': 'hi', 'ふ': 'fu', 'へ': 'he', 'ほ': 'ho',
-            'ま': 'ma', 'み': 'mi', 'む': 'mu', 'め': 'me', 'も': 'mo',
-            'や': 'ya', 'ゆ': 'yu', 'よ': 'yo',
-            'ら': 'ra', 'り': 'ri', 'る': 'ru', 'れ': 're', 'ろ': 'ro',
-            'わ': 'wa', 'を': 'wo', 'ん': 'n',
-            'が': 'ga', 'ぎ': 'gi', 'ぐ': 'gu', 'げ': 'ge', 'ご': 'go',
-            'ざ': 'za', 'じ': 'ji', 'ず': 'zu', 'ぜ': 'ze', 'ぞ': 'zo',
-            'だ': 'da', 'ぢ': 'ji', 'づ': 'zu', 'で': 'de', 'ど': 'do',
-            'ば': 'ba', 'び': 'bi', 'ぶ': 'bu', 'べ': 'be', 'ぼ': 'bo',
-            'ぱ': 'pa', 'ぴ': 'pi', 'ぷ': 'pu', 'ぺ': 'pe', 'ぽ': 'po',
-            'ア': 'A', 'イ': 'I', 'ウ': 'U', 'エ': 'E', 'オ': 'O',
-            'カ': 'KA', 'キ': 'KI', 'ク': 'KU', 'ケ': 'KE', 'コ': 'KO',
-            'サ': 'SA', 'シ': 'SHI', 'ス': 'SU', 'セ': 'SE', 'ソ': 'SO',
-            'タ': 'TA', 'チ': 'CHI', 'ツ': 'TSU', 'テ': 'TE', 'ト': 'TO',
-            'ナ': 'NA', 'ニ': 'NI', 'ヌ': 'NU', 'ネ': 'NE', 'ノ': 'NO',
-            'ハ': 'HA', 'ヒ': 'HI', 'フ': 'FU', 'ヘ': 'HE', 'ホ': 'HO',
-            'マ': 'MA', 'ミ': 'MI', 'ム': 'MU', 'メ': 'ME', 'モ': 'MO',
-            'ヤ': 'YA', 'ユ': 'YU', 'ヨ': 'YO',
-            'ラ': 'RA', 'リ': 'RI', 'ル': 'RU', 'レ': 'RE', 'ロ': 'RO',
-            'ワ': 'WA', 'ヲ': 'WO', 'ン': 'N',
-            'ガ': 'GA', 'ギ': 'GI', 'グ': 'GU', 'ゲ': 'GE', 'ゴ': 'GO',
-            'ザ': 'ZA', 'ジ': 'JI', 'ズ': 'ZU', 'ゼ': 'ZE', 'ゾ': 'ZO',
-            'ダ': 'DA', 'ヂ': 'JI', 'ヅ': 'ZU', 'デ': 'DE', 'ド': 'DO',
-            'バ': 'BA', 'ビ': 'BI', 'ブ': 'BU', 'ベ': 'BE', 'ボ': 'BO',
-            'パ': 'PA', 'ピ': 'PI', 'プ': 'PU', 'ペ': 'PE', 'ポ': 'PO',
-            'ー': '-', 'ッ': 'TSU',
-            # 追加の日本語文字
-            'きゃ': 'kya', 'きゅ': 'kyu', 'きょ': 'kyo',
-            'しゃ': 'sha', 'しゅ': 'shu', 'しょ': 'sho',
-            'ちゃ': 'cha', 'ちゅ': 'chu', 'ちょ': 'cho',
-            'にゃ': 'nya', 'にゅ': 'nyu', 'にょ': 'nyo',
-            'ひゃ': 'hya', 'ひゅ': 'hyu', 'ひょ': 'hyo',
-            'みゃ': 'mya', 'みゅ': 'myu', 'みょ': 'myo',
-            'りゃ': 'rya', 'りゅ': 'ryu', 'りょ': 'ryo',
-            'ぎゃ': 'gya', 'ぎゅ': 'gyu', 'ぎょ': 'gyo',
-            'じゃ': 'ja', 'じゅ': 'ju', 'じょ': 'jo',
-            'びゃ': 'bya', 'びゅ': 'byu', 'びょ': 'byo',
-            'ぴゃ': 'pya', 'ぴゅ': 'pyu', 'ぴょ': 'pyo'
-        }
+    # 配置された日本語フォントファイルを使用
+    font_path = "NotoSansJP-VariableFont_wght.ttf"
+    
+    try:
+        # 日本語フォントを使用してワードクラウドを生成
+        wordcloud = WordCloud(
+            width=800, 
+            height=400, 
+            background_color='white',
+            colormap='viridis',
+            font_path=font_path,
+            max_words=100,
+            max_font_size=100,
+            min_font_size=10,
+            prefer_horizontal=0.7,
+            relative_scaling=0.5,
+            collocations=False
+        ).generate_from_frequencies(word_freq)
         
-        # 日本語文字を英語に変換
-        converted = ''
-        for char in word:
-            if char in japanese_to_english:
-                converted += japanese_to_english[char]
-            elif ord(char) <= 127:  # ASCII文字はそのまま
-                converted += char
-            else:
-                # 変換できない文字はスキップ
-                continue
-        return converted if converted else word
-    
-    # 日本語文字を英語に変換したワードクラウド用データを作成
-    english_word_freq = {}
-    for word, freq in word_freq.items():
-        english_word = convert_japanese_to_english(word)
-        if english_word and english_word != word:  # 変換された場合のみ
-            english_word_freq[english_word] = freq
-        elif all(ord(char) <= 127 for char in word):  # 元々英語の場合
-            english_word_freq[word] = freq
-    
-    # 英語のワードクラウドを生成
-    if english_word_freq:
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.imshow(wordcloud, interpolation='bilinear')
+        ax.axis('off')
+        ax.set_title(title, fontsize=16, fontweight='bold')
+        
+        return fig
+        
+    except Exception as e:
+        # フォントファイルが見つからない場合のフォールバック
         try:
+            st.warning("日本語フォントファイルが見つからないため、システムフォントを使用します。")
             wordcloud = WordCloud(
                 width=800, 
                 height=400, 
@@ -253,21 +209,18 @@ def create_wordcloud(word_freq, title="ワードクラウド"):
                 prefer_horizontal=0.8,
                 relative_scaling=0.3,
                 collocations=False,
-                font_path=None  # システムデフォルトフォントを使用
-            ).generate_from_frequencies(english_word_freq)
+                font_path=None
+            ).generate_from_frequencies(word_freq)
             
             fig, ax = plt.subplots(figsize=(10, 6))
             ax.imshow(wordcloud, interpolation='bilinear')
             ax.axis('off')
-            ax.set_title(f"{title} (英語変換版)", fontsize=16, fontweight='bold')
+            ax.set_title(f"{title} (システムフォント版)", fontsize=16, fontweight='bold')
             
             return fig
-        except Exception as e:
-            st.error(f"ワードクラウドの生成中にエラーが発生しました: {str(e)}")
+        except Exception as e2:
+            st.error(f"ワードクラウドの生成中にエラーが発生しました: {str(e2)}")
             return None
-    else:
-        st.warning("日本語フォントが利用できないため、ワードクラウドを生成できませんでした。")
-        return None
 
 def create_cooccurrence_network(cooccurrence, min_weight=2, max_nodes=30):
     """共起ネットワークを作成"""
