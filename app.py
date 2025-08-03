@@ -168,39 +168,56 @@ def create_wordcloud(word_freq, title="ワードクラウド"):
     if not word_freq:
         return None
     
-    # 日本語フォントをダウンロードして使用
+    # Google Fontsから日本語フォントをダウンロード
     import urllib.request
     import tempfile
+    import ssl
     
-    # 日本語フォントのURL（Google FontsのNoto Sans Japanese）
-    font_url = "https://github.com/googlefonts/noto-cjk/raw/main/Sans/OTF/Japanese/NotoSansCJKjp-Regular.otf"
+    # SSL証明書の検証を無効化（Streamlit Cloudでの問題を回避）
+    ssl._create_default_https_context = ssl._create_unverified_context
     
-    try:
-        # フォントファイルをダウンロード
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.otf') as tmp_file:
-            urllib.request.urlretrieve(font_url, tmp_file.name)
-            font_path = tmp_file.name
-        
-        # ワードクラウドを生成
-        wordcloud = WordCloud(
-            width=800, 
-            height=400, 
-            background_color='white',
-            colormap='viridis',
-            font_path=font_path,
-            max_words=100,
-            max_font_size=100,
-            min_font_size=10,
-            prefer_horizontal=0.7,
-            relative_scaling=0.5,
-            collocations=False
-        ).generate_from_frequencies(word_freq)
-        
-        # 一時ファイルを削除
-        os.unlink(font_path)
-        
-    except Exception as e:
-        # フォントダウンロードに失敗した場合のフォールバック
+    # Google Fontsの日本語フォントURL
+    font_urls = [
+        "https://fonts.gstatic.com/s/notosansjp/v52/-F62fjtqLzI2JPCgQBnw7HFowAIO2lZ9hg.woff2",
+        "https://fonts.gstatic.com/s/notosansjp/v52/-F6qfjSQq_F9XIZCGnXJkQ3YlbbH.woff2",
+        "https://github.com/google/fonts/raw/main/ofl/notosansjapanese/NotoSansJP-Regular.otf"
+    ]
+    
+    wordcloud = None
+    for font_url in font_urls:
+        try:
+            # フォントファイルをダウンロード
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.woff2') as tmp_file:
+                req = urllib.request.Request(font_url, headers={'User-Agent': 'Mozilla/5.0'})
+                with urllib.request.urlopen(req) as response:
+                    tmp_file.write(response.read())
+                font_path = tmp_file.name
+            
+            # ワードクラウドを生成
+            wordcloud = WordCloud(
+                width=800, 
+                height=400, 
+                background_color='white',
+                colormap='viridis',
+                font_path=font_path,
+                max_words=100,
+                max_font_size=100,
+                min_font_size=10,
+                prefer_horizontal=0.7,
+                relative_scaling=0.5,
+                collocations=False
+            ).generate_from_frequencies(word_freq)
+            
+            # 一時ファイルを削除
+            os.unlink(font_path)
+            break
+            
+        except Exception as e:
+            # 次のURLを試行
+            continue
+    
+    # フォントダウンロードに失敗した場合のフォールバック
+    if wordcloud is None:
         try:
             # システムフォントを使用
             wordcloud = WordCloud(
